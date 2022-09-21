@@ -6,3 +6,4 @@ InteractiveChoicer 猪舍标点，有几种模式
 fast_choose_instance 分类数据手动标，mask外涂黑  
 via2coco 数据格式转换  
 via2yolov5 数据格式转换  
+cvat_images_to_yolov5 cvat image导出的xml转换成yolov5标注
