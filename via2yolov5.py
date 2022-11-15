@@ -1,20 +1,20 @@
 # *coding:utf-8 *
 
 import os
+import cv2
 import json
 
-anno_file_path = r'D:\data\20220823145459\train\via_region_data.json'
+anno_file_path = r'C:\Users\38698\work_space\data\20220929101743\val\via_region_data.json'
 
-saveFolder = r'D:\data\20220823145459\yolo_train'
+saveFolder = r'C:\Users\38698\work_space\data\showroom\labels\val'
 if not os.path.exists(saveFolder):
     os.makedirs(saveFolder)
 
 annotations = json.load(open(anno_file_path, 'r', encoding='UTF-8'))
 imgs = annotations  # ["_via_img_metadata"]
 
-WIDTH = 1920
-HEIGHT = 1080
 objClass = 0
+model_name = os.path.abspath('.').split('/')[-1]
 
 # 遍历每个图片
 for imgId in imgs:
@@ -24,7 +24,15 @@ for imgId in imgs:
     regions = imgs[imgId]['regions']
     # if len(regions) <= 0:
     #     continue
-
+    img_dir = ""
+    for idx, i in enumerate(anno_file_path.split('\\')):
+        if idx != len(anno_file_path.split('\\')) - 1:
+            img_dir += i
+            img_dir += '/'
+    img_dir += filename
+    img = cv2.imread(img_dir)
+    WIDTH = img.shape[1]
+    HEIGHT = img.shape[0]
     data = ''
     # 遍历每个区域
     for region in regions:

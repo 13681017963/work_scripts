@@ -33,22 +33,28 @@ class ResourceContent:
     def __init__(self, imp):
         self._imp = imp
 
-    def cut_image(self, file_load_from, img_read_from_dir, img_write_to_dir, remain_folder=True, mask_name=None):
-        self._imp.fetch(file_load_from, img_read_from_dir, img_write_to_dir, remain_folder, mask_name)
+    def cut_image(self, file_load_from, img_read_from_dir, img_write_to_dir, remain_folder=True, mask_name=None, processes_num=1):
+        self._imp.fetch(file_load_from, img_read_from_dir, img_write_to_dir, remain_folder, mask_name, processes_num)
 
 
 class ResourceContentFetcher(metaclass=ABCMeta):
     @abstractmethod
-    def fetch(self, file_load_from, img_read_from, img_write_to_dir, remain_folder=True, mask_name=None):
+    def fetch(self, file_load_from, img_read_from, img_write_to_dir, remain_folder=True, mask_name=None, processes_num=1):
         pass
 
 
 class FileLoadFetcher(ResourceContentFetcher):
-    def do_mask(self, dorm_name, img_name, px, py, img_read_from_dir, img_write_to_dir, remain_folder):
+    def do_mask(self, dorm_name, img_name, px, py, img_read_from_dir, img_write_to_dir, remain_folder, random_mask=False):
+        suffix = "." + img_name.split('.')[-1]
         image = cv2.imdecode(
             np.fromfile(img_read_from_dir + '/' + dorm_name + '/' + img_name, dtype=np.uint8), -1)
         mask = ~np.zeros_like(image)
-        random_mask = (np.random.random(image.shape) * 255).astype(np.uint8)
+        if random_mask:
+            # random mask
+            random_mask = (np.random.random(image.shape) * 255).astype(np.uint8)
+        else:
+            # black mask
+            random_mask = (np.random.random(image.shape) * 0).astype(np.uint8)
         poly = [[x, y] for x, y in zip(px, py)]
         poly = np.array(poly)
         mask = ~mask
@@ -65,13 +71,13 @@ class FileLoadFetcher(ResourceContentFetcher):
         except FileExistsError:
             pass
         if remain_folder:
-            cv2.imencode('.jpg', image)[1].tofile(
-                img_write_to_dir + '/' + dorm_name + '/' + img_name.split('.')[0] + '.jpg')
+            cv2.imencode(suffix, image)[1].tofile(
+                img_write_to_dir + '/' + dorm_name + '/' + img_name.split('.')[0] + suffix)
         else:
-            cv2.imencode('.jpg', image)[1].tofile(img_write_to_dir + '/' + img_name.split('.')[0] + '.jpg')
+            cv2.imencode(suffix, image)[1].tofile(img_write_to_dir + '/' + img_name.split('.')[0] + suffix)
 
-    def fetch(self, file_load_from, img_read_from_dir, img_write_to_dir, remain_folder=True, mask_name=None):
-        pool = multiprocessing.Pool(processes=cpu_count())
+    def fetch(self, file_load_from, img_read_from_dir, img_write_to_dir, remain_folder=True, mask_name=None, processes_num=1):
+        pool = multiprocessing.Pool(processes=processes_num)
         config_lst = os.listdir(file_load_from)
         file_lst = os.listdir(img_read_from_dir)
         file_num = count_file(img_read_from_dir)
@@ -109,8 +115,9 @@ skip = True
 
 
 class LokiLoadFetcher(ResourceContentFetcher):
-    def do_mask(self, v, img_read_from_dir, img_write_to_dir, remain_folder, mask_name):
+    def do_mask(self, v, img_read_from_dir, img_write_to_dir, remain_folder, mask_name, random_mask=False):
         filename = img_read_from_dir + '/' + v['filename']
+        suffix = "." + v['filename'].split('.')[-1]
         # Note: filename filter, edit every time you run, '.' means leave all filename
         status = filename_filter(v['filename'], content='.', verbose=False)
         if not status:
@@ -121,7 +128,12 @@ class LokiLoadFetcher(ResourceContentFetcher):
             print("\n ***Warning %s not found" % filename)
             return
         mask = ~np.zeros_like(image)
-        random_mask = (np.random.random(image.shape) * 255).astype(np.uint8)
+        if random_mask:
+            # random mask
+            random_mask = (np.random.random(image.shape) * 255).astype(np.uint8)
+        else:
+            # black mask
+            random_mask = (np.random.random(image.shape) * 0).astype(np.uint8)
         found_mask = False
         for region in v['regions']:
             if region['region_attributes']['type'] == mask_name:
@@ -138,6 +150,11 @@ class LokiLoadFetcher(ResourceContentFetcher):
             print("\nNo Mask found %s" % filename)
             if skip:
                 print("skip no mask")
+                if remain_folder:
+                    cv2.imencode(suffix, image)[1].tofile(
+                        img_write_to_dir + '/' + v['filename'].split('.')[0] + suffix)
+                else:
+                    cv2.imencode(suffix, image)[1].tofile(img_write_to_dir + '/' + v['filename'].split('.')[0] + suffix)
                 return
         else:
             image = cv2.bitwise_and(image, mask)
@@ -149,13 +166,13 @@ class LokiLoadFetcher(ResourceContentFetcher):
         except FileExistsError:
             pass
         if remain_folder:
-            cv2.imencode('.jpg', image)[1].tofile(
-                img_write_to_dir + '/' + v['filename'].split('.')[0] + '.jpg')
+            cv2.imencode(suffix, image)[1].tofile(
+                img_write_to_dir + '/' + v['filename'].split('.')[0] + suffix)
         else:
-            cv2.imencode('.jpg', image)[1].tofile(img_write_to_dir + '/' + v['filename'].split('.')[0] + '.jpg')
+            cv2.imencode(suffix, image)[1].tofile(img_write_to_dir + '/' + v['filename'].split('.')[0] + suffix)
 
-    def fetch(self, file_load_from, img_read_from_dir, img_write_to_dir, remain_folder=True, mask_name=None):
-        pool = multiprocessing.Pool(processes=cpu_count())
+    def fetch(self, file_load_from, img_read_from_dir, img_write_to_dir, remain_folder=True, mask_name=None, processes_num=1):
+        pool = multiprocessing.Pool(processes=processes_num)
         file_num = count_file(img_read_from_dir)
         pbar = tqdm(total=file_num)
         pbar.set_description(' Flow ')
@@ -170,11 +187,17 @@ class LokiLoadFetcher(ResourceContentFetcher):
 
 
 class PolygonLoadFetcher(ResourceContentFetcher):
-    def do_mask(self, dorm_name, img_name, px, py, img_read_from_dir, img_write_to_dir, remain_folder):
+    def do_mask(self, dorm_name, img_name, px, py, img_read_from_dir, img_write_to_dir, remain_folder, random_mask=False):
+        suffix = "." + img_name.split('.')[-1]
         image = cv2.imdecode(
             np.fromfile(img_read_from_dir + '/' + dorm_name + '/' + img_name, dtype=np.uint8), -1)
         mask = ~np.zeros_like(image)
-        random_mask = (np.random.random(image.shape) * 255).astype(np.uint8)
+        if random_mask:
+            # random mask
+            random_mask = (np.random.random(image.shape) * 255).astype(np.uint8)
+        else:
+            # black mask
+            random_mask = (np.random.random(image.shape) * 0).astype(np.uint8)
         poly = [[x, y] for x, y in zip(px, py)]
         poly = np.array(poly)
         mask = ~mask
@@ -191,13 +214,13 @@ class PolygonLoadFetcher(ResourceContentFetcher):
         except FileExistsError:
             pass
         if remain_folder:
-            cv2.imencode('.jpg', image)[1].tofile(
-                img_write_to_dir + '/' + dorm_name + '/' + img_name.split('.')[0] + '.jpg')
+            cv2.imencode(suffix, image)[1].tofile(
+                img_write_to_dir + '/' + dorm_name + '/' + img_name.split('.')[0] + suffix)
         else:
-            cv2.imencode('.jpg', image)[1].tofile(img_write_to_dir + '/' + img_name.split('.')[0] + '.jpg')
+            cv2.imencode(suffix, image)[1].tofile(img_write_to_dir + '/' + img_name.split('.')[0] + suffix)
 
-    def fetch(self, file_load_from, img_read_from_dir, img_write_to_dir, remain_folder=True, mask_name=None):
-        pool = multiprocessing.Pool(processes=cpu_count())
+    def fetch(self, file_load_from, img_read_from_dir, img_write_to_dir, remain_folder=True, mask_name=None, processes_num=1):
+        pool = multiprocessing.Pool(processes=processes_num)
         config_lst = os.listdir(file_load_from)
         file_lst = os.listdir(img_read_from_dir)
         file_num = count_file(img_read_from_dir)
@@ -249,6 +272,7 @@ def main():
     parser.add_argument('-re', '--remain_folder', type=str2bool, choices=[True, False], default=True,
                         help="Only 'file' effective")
     parser.add_argument('-m', '--mask_name', type=str, default=None, help="Only 'loki' effective")
+    parser.add_argument('-n', '--processes_num', type=int, default=1, help="processes number")
     args = parser.parse_args()
 
     standard = args.standard
@@ -277,7 +301,7 @@ def main():
 
 # Sample
 # 猪舍围栏 pigsty_corral
-# python cut_outside_black.py  -s loki -f D:/HFSFile/20210727172611/train/via_region_data.json -r D:/HFSFile/20210727172611/train -w D:/HFSFile/czc/train -m center_ROI
-# python cut_outside_black.py  -s file -f D:/nxin/regions_BYZ_nankou -r D:/run_on -w D:/run_on_cut -re False
+# python cut_outside_black.py  -s loki -f D:/HFSFile/20210727172611/train/via_region_data.json -r D:/HFSFile/20210727172611/train -w D:/HFSFile/czc/train -m center_ROI -n 4
+# python cut_outside_black.py  -s file -f D:/nxin/regions_BYZ_nankou -r D:/run_on -w D:/run_on_cut -re False -n 4
 if __name__ == '__main__':
     main()
