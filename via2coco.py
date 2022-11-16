@@ -202,7 +202,7 @@ image_prefix_val = "%s/val/" % data_name
 
 # given_id_dict = {'pig_head':0, 'pig_hip':1}
 # ignore_keys = ['center_ROI']
-given_id_dict = {'pig': 0}
+given_id_dict = {'pig': 1}
 ignore_keys = ['valid_area']
 
 id_dict = parse_category_id(LOKI_ann_file_train, LOKI_ann_file_val, given_id_dict, ignore_keys)
