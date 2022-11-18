@@ -4,6 +4,7 @@ import sys
 from IPython import embed
 
 
+# 需手动把负样本拷贝到训练集
 # sys[1] 负样本图片文件夹
 # sys[2] 原coco文件路径
 # sys[3] 添加负样本后的输出文件
