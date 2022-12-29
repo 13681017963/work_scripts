@@ -185,7 +185,7 @@ def convert_balloon_to_coco(LOKI_ann_file, COCO_out_json, image_prefix, category
         annotations=annotations,
         categories=categories)
 
-    mmcv.dump(coco_format_json, COCO_out_json)
+    mmcv.dump(coco_format_json, COCO_out_json, indent=4)
 
     print('convert over %s, with type : id map :' % LOKI_ann_file, category_id_dict)
 
@@ -202,8 +202,10 @@ image_prefix_val = "%s/val/" % data_name
 
 # given_id_dict = {'pig_head':0, 'pig_hip':1}
 # ignore_keys = ['center_ROI']
-given_id_dict = {'pig': 1}
-ignore_keys = ['valid_area']
+given_id_dict = {'pig_ear': 1, 'pig_anus': 2, 'sow_genitalia': 3}
+# 猪耳朵 pig_ear 猪肛门 pig_anus 母猪阴部 sow_genitalia
+# ignore_keys = ['pig_anus', 'sow_genitalia']
+ignore_keys = []
 
 id_dict = parse_category_id(LOKI_ann_file_train, LOKI_ann_file_val, given_id_dict, ignore_keys)
 
