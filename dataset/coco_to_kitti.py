@@ -13,7 +13,7 @@ annotations = mmcv.load(anno_file_path)
 imgs = annotations  # ["_via_img_metadata"]
 
 objClass = 0
-model_name = os.path.abspath('.').split('/')[-1]
+model_name = os.path.abspath('..').split('/')[-1]
 
 # 遍历每个图片
 for img in mmcv.track_iter_progress(imgs['images']):

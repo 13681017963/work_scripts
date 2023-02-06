@@ -14,7 +14,7 @@ annotations = json.load(open(anno_file_path, 'r', encoding='UTF-8'))
 imgs = annotations  # ["_via_img_metadata"]
 
 objClass = 0
-model_name = os.path.abspath('.').split('/')[-1]
+model_name = os.path.abspath('..').split('/')[-1]
 
 # 遍历每个图片
 for imgId in imgs:
