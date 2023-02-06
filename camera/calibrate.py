@@ -71,7 +71,6 @@ def cal_internal_monocular(obj_p, img_list, checker_board):
     :param checker_board: 角点的横纵数量，格式为元组
     :return: 标定是否成功，相机内参数矩阵，畸变系数
     """
-    from orbec_astra_Sample import load_data, get_world_coordinate
     try:
         # 存储3D点
         obj_points = []
@@ -93,10 +92,9 @@ def cal_internal_monocular(obj_p, img_list, checker_board):
                 obj_points.append(obj_p)
                 # 将寻找到的亚像素角点添加到像素坐标列表中
                 img_points.append(corners)
-        print(len(obj_points))
+        # flags = cv2.CALIB_THIN_PRISM_MODEL
         # 进行相机的内参数标定
-        ret, mtx, dist, _, _ = cv2.calibrateCamera(obj_points, img_points, gray_size, None, None,
-                                                   flags=cv2.CALIB_THIN_PRISM_MODEL)
+        ret, mtx, dist, _, _ = cv2.calibrateCamera(obj_points, img_points, gray_size, None, None)
 
         # 返回相关信息
         return ret, mtx, dist
@@ -107,21 +105,30 @@ def cal_internal_monocular(obj_p, img_list, checker_board):
 
 def cal_outside_image_monocular(obj_p, img_, checker_board, mtx, dist):
     """
-        根据内参，图像，世界坐标，求出对于当前世界坐标系下的外参（旋转、平移）
-        :param obj_p: 角点的世界坐标，shape:[]
-        :param img_: 用于标定的图片
-        :param checker_board: 角点的横纵数量，格式为元组
-        :param mtx: 相机内参矩阵
-        :param dist: 相机畸变向量，shape:[5, ]
-        :return: 相机的外参，包含旋转向量，旋转矩阵，平移向量
+    根据内参，图像，世界坐标，求出对于当前世界坐标系下的外参（旋转、平移）
+    :param obj_p: 角点的世界坐标，shape:[]
+    :param img_: 用于标定的图片
+    :param checker_board: 角点的横纵数量，格式为元组
+    :param mtx: 相机内参矩阵
+    :param dist: 相机畸变向量，shape:[5, ]
+    :return: 相机的外参，包含旋转向量，旋转矩阵，平移向量
     """
-    gray = cv2.cvtColor(img_, cv2.COLOR_BGR2GRAY)
-    try:
-        _, corners = _find_chessboard_corners(gray, checker_board)
-        ret, rvec, tvec = cv2.solvePnP(obj_p, corners,  mtx, dist, flags=cv2.SOLVEPNP_EPNP)
-        rmat = cv2.Rodrigues(rvec)[0]
+    corner_lst = []
+    for idx, img in enumerate(img_):
+        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        try:
+            _, corners = _find_chessboard_corners(gray, checker_board)
+            corner_lst.append(corners)
+        except cv2.error:
+            continue
+    corners = np.asarray(corner_lst).reshape(-1, 2)
+    obj_p = np.asarray(obj_p).reshape(-1, 3)
+    # cv2.SOLVEPNP_EPNP
+    ret, rvec, tvec = cv2.solvePnP(obj_p, corners, mtx, dist, flags=cv2.SOLVEPNP_SQPNP)
+    rmat = cv2.Rodrigues(rvec)[0]
+    if ret:
         return True, rvec, rmat, tvec
-    except cv2.error:
+    else:
         # 标定失败，返回相关信息
         return False, None, None, None
 
