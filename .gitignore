@@ -19,3 +19,10 @@
 /camera/rvec2.npy
 /camera/T1.npy
 /camera/T2.npy
+/eval/n.pt
+/eval/l.pt
+/eval/m.pt
+/eval/s.pt
+/eval/x.pt
+/eval/coco128.yaml
+/eval/runs
